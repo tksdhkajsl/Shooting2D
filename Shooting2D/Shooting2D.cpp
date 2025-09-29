@@ -15,6 +15,15 @@ HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
+Gdiplus::Point g_HousePosition(100, 100);
+constexpr int g_HouseVerticesCount = 7;
+const Gdiplus::Point g_HouseVertices[g_HouseVerticesCount] =
+{
+    {0,-100},{50,-50},{30,-50},{30,0},{-30,0},{-30,-50},{-50,-50}
+};
+//bool g_bKeyWasPressed
+std::unordered_map<InputDirection, bool> g_KeyWasPressedMap;
+
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -36,6 +45,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ULONG_PTR Token;
     Gdiplus::GdiplusStartupInput StartupInput;
     Gdiplus::GdiplusStartup(&Token, &StartupInput, nullptr);
+    g_KeyWasPressedMap[InputDirection::Up] = false;
+    g_KeyWasPressedMap[InputDirection::Down] = false;
+    g_KeyWasPressedMap[InputDirection::Left] = false;
+    g_KeyWasPressedMap[InputDirection::Right] = false;
 
     // 전역 문자열을 초기화합니다.
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -175,6 +188,67 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         EndPaint(hWnd, &ps);
     }
     break;
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_LEFT:
+            if (!g_KeyWasPressedMap[static_cast<InputDirection>(wParam)])
+            {
+                g_KeyWasPressedMap[static_cast<InputDirection>(wParam)] = true;
+                OutputDebugStringW(L"왼쪽키를 눌렀다.\n");
+                g_HousePosition.X -= 10;
+                InvalidateRect(hWnd, nullptr, TRUE);    // 창을 다시 그리도록 요청(WM_PAINT 메시지가 들어간다)
+            }
+            break;
+        case VK_RIGHT:
+            if (!g_KeyWasPressedMap[static_cast<InputDirection>(wParam)])
+            {
+                g_KeyWasPressedMap[static_cast<InputDirection>(wParam)] = true;
+                OutputDebugStringW(L"오른쪽키를 눌렀다.\n");
+                g_HousePosition.X += 10;
+                InvalidateRect(hWnd, nullptr, TRUE);
+            }
+            break;
+        case VK_UP:
+            if (!g_KeyWasPressedMap[static_cast<InputDirection>(wParam)])
+            {
+                g_KeyWasPressedMap[static_cast<InputDirection>(wParam)] = true;
+                OutputDebugStringW(L"위쪽키를 눌렀다.\n");
+                g_HousePosition.Y -= 10;
+                InvalidateRect(hWnd, nullptr, TRUE);
+            }
+            break;
+        case VK_DOWN:
+            if (!g_KeyWasPressedMap[static_cast<InputDirection>(wParam)])
+            {
+                g_KeyWasPressedMap[static_cast<InputDirection>(wParam)] = true;
+                OutputDebugStringW(L"아래쪽키를 눌렀다.\n");
+                g_HousePosition.Y += 10;
+                InvalidateRect(hWnd, nullptr, TRUE);
+            }
+            break;
+        case VK_ESCAPE:
+            DestroyWindow(hWnd);    // hWnd 창을 닫아라 -> 프로그램을 꺼라(WM_DESTROY메시지가 들어간다.)
+        }
+        break;
+    case WM_KEYUP:
+        g_KeyWasPressedMap[static_cast<InputDirection>(wParam)] = false;    // 키가 떨어졌다고 표시
+        switch (wParam)
+        {
+        case VK_LEFT:
+            OutputDebugStringW(L"왼쪽키를 땠다.\n");
+            break;
+        case VK_RIGHT:
+            OutputDebugStringW(L"오른쪽키를 땠다.\n");
+            break;
+        case VK_UP:
+            OutputDebugStringW(L"위쪽키를 땠다.\n");
+            break;
+        case VK_DOWN:
+            OutputDebugStringW(L"아래쪽키를 땠다.\n");
+            break;
+        }
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -183,6 +257,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return 0;
 }
+
+// 실습
+// 1. 집모양을 그리고 키보드 입력으로 위아래좌우로 움직이기.
+// 2. 누르고 있을 때 한번만 움직여야 한다.(WM_KEYUP 활용)
+
 
 // 정보 대화 상자의 메시지 처리기입니다.
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
