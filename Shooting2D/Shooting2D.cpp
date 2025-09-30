@@ -15,6 +15,9 @@ HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
+Gdiplus::Point g_AppPosition(200, 100);
+Gdiplus::Point g_ScreenSize(800, 600);
+
 Gdiplus::Point g_HousePosition(100, 100);
 constexpr int g_HouseVerticesCount = 7;
 const Gdiplus::Point g_HouseVertices[g_HouseVerticesCount] =
@@ -122,14 +125,20 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
+    //클라이언트 영역의 크기를 원하는 크기로 조절하기
+    RECT rc = { 0,0,g_ScreenSize.X,g_ScreenSize.Y };
+
+    AdjustWindowRectEx(&rc, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
+
+
     // 실제 윈도우 생성
     HWND hWnd = CreateWindowW(szWindowClass,
         L"2D Shooting for GDI+",
         // WS_OVERLAPPEDWINDOW에서 
         // WS_MAXIMIZEBOX(최대화 버튼 비활성화)와 WS_THICKFRAME(테두리잡고 크기 변경 금지)만 제외
         WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME,
-        200, 100,   // 시작 좌표(스크린 좌표계)
-        400, 300,    // 크기
+        g_AppPosition.X, g_AppPosition.Y,   // 시작 좌표(스크린 좌표계)
+        rc.right - rc.left, rc.bottom - rc.top,    // 크기(윈도우 스타일에 맞춰 재조정된 크기)
         nullptr, nullptr, hInstance, nullptr);
 
     if (!hWnd)
@@ -157,23 +166,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_COMMAND:
-    {
-        int wmId = LOWORD(wParam);
-        // 메뉴 선택을 구문 분석합니다:
-        switch (wmId)
-        {
-        case IDM_ABOUT:
-            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-            break;
-        case IDM_EXIT:
-            DestroyWindow(hWnd);
-            break;
-        default:
-            return DefWindowProc(hWnd, message, wParam, lParam);
-        }
-    }
-    break;
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
@@ -182,8 +174,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
         Gdiplus::Graphics GraphicsInstance(hdc);    // Graphics객체 만들기
 
-        Gdiplus::SolidBrush RedBrush(Gdiplus::Color(255, 255, 0, 0));
-        GraphicsInstance.FillEllipse(&RedBrush, 200, 50, 60, 60);
+        /*Gdiplus::SolidBrush RedBrush(Gdiplus::Color(255, 255, 0, 0));
+        GraphicsInstance.FillRectangle(&RedBrush, 200, 50, 60, 120);
+
+        Gdiplus::Pen BluePen(Gdiplus::Color(255,0,0,255), 2.0f);
+        GraphicsInstance.DrawEllipse(&BluePen, 50, 250, 60, 60);
+
+        Gdiplus::SolidBrush BlueBrush(Gdiplus::Color(255, 0, 0, 255));
+        Gdiplus::Point Triangle[3] = {
+            Gdiplus::Point(100,50),
+            Gdiplus::Point(50,100),
+            Gdiplus::Point(150,100)
+        };
+        GraphicsInstance.FillPolygon(&BlueBrush, Triangle, 3);
+
+        GraphicsInstance.DrawRectangle(&BluePen, 70, 100, 60, 50);
+
+        GraphicsInstance.FillPie(&RedBrush, 300, 50, 50, 50, 0.0f, 120.0f);
+
+        Gdiplus::GraphicsPath Path;
+        Path.AddLine(Gdiplus::Point(10, 10), Gdiplus::Point(300, 10));
+        Path.AddLine(Gdiplus::Point(300, 10), Gdiplus::Point(300, 100));
+        GraphicsInstance.FillPath(&BlueBrush, &Path);*/
+
+        // 1. 파란색 원 그리기
+        // 2. 기타 도형 그려보기
+        // 3. 집 모양 만들어보기
+
+        Gdiplus::Pen GreenPen(Gdiplus::Color(255, 0, 255, 0), 2.0f);
+        Gdiplus::SolidBrush GreenBrush(Gdiplus::Color(255, 0, 255, 0));
+        Gdiplus::Point Positions[g_HouseVerticesCount];
+        for (int i = 0; i < g_HouseVerticesCount; i++)
+        {
+            Positions[i] = g_HousePosition + g_HouseVertices[i];
+        }
+        //GraphicsInstance.DrawPolygon(&GreenPen, Positions, g_HouseVerticesCount);
+        GraphicsInstance.FillPolygon(&GreenBrush, Positions, g_HouseVerticesCount);
 
         EndPaint(hWnd, &ps);
     }
