@@ -3,11 +3,11 @@
 
 #include "framework.h"
 #include "Shooting2D.h"
-#include "Map.h"
 
-#include <crtdbg.h>
-#define _CRTDBG_MAP_ALLOC
-#define new new(_NORMAL_BLOCK, __FILE__,__LINE__)
+#include <random>
+//#include <crtdbg.h>
+//#define _CRTDBG_MAP_ALLOC
+//#define new new(_NORMAL_BLOCK, __FILE__, __LINE__)
 
 #define MAX_LOADSTRING 100
 
@@ -16,9 +16,25 @@ HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
+HWND g_hMainWindow = nullptr;
 
-int InputX = 0;
-int InputY = 0;
+Gdiplus::Point g_AppPosition(200, 100);
+Gdiplus::Point g_ScreenSize(600, 800);
+
+Gdiplus::Point g_HousePosition(100, 100);
+constexpr int g_HouseVerticesCount = 7;
+const Gdiplus::Point g_HouseVertices[g_HouseVerticesCount] =
+{
+    {0,-100},{50,-50},{30,-50},{30,0},{-30,0},{-30,-50},{-50,-50}
+};
+
+Gdiplus::Bitmap* g_BackBuffer = nullptr;    // 백버퍼용 종이
+Gdiplus::Graphics* g_BackBufferGraphics = nullptr;  // 백버퍼용 종이에 그리기 위한 도구
+
+Player* g_Player = nullptr;
+Map* g_Map = nullptr;
+
+int PositionY = 0;
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -34,12 +50,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(lpCmdLine);
 
     // TODO: 여기에 코드를 입력합니다.
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+    //_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
     // GDI+ 초기화
     ULONG_PTR Token;
     Gdiplus::GdiplusStartupInput StartupInput;
     Gdiplus::GdiplusStartup(&Token, &StartupInput, nullptr);
+    g_Player = new Player(L"./Images/Airplane.png");
+    g_Map = new Map(L"./Images/Background.png");
 
     // 전역 문자열을 초기화합니다.
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -58,15 +76,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // 3. 메시지 루프
     // 기본 메시지 루프입니다:(메세지 큐에 들어온 메세지들을 하나씩 처리하는 부분)
-    while (GetMessage(&msg, nullptr, 0, 0))
+    while (true)
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) // 단축키 처리
+        if (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE))
         {
-            TranslateMessage(&msg); // 메시지를 메시지 프로시저로 보내 메시지를 처리한다.
-            DispatchMessage(&msg);
+            if (msg.message == WM_QUIT) // 종료 메시지가 나오면 그냥 종료
+                break;
+
+            if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) // 단축키 처리
+            {
+                TranslateMessage(&msg); // 메시지를 메시지 프로시저로 보내 메시지를 처리한다.
+                DispatchMessage(&msg);
+            }
         }
+        
+        PositionY++;
+
+        InvalidateRect(g_hMainWindow, nullptr, FALSE);
+
     }
 
+    delete g_Player;
+    g_Player = nullptr;
     // GDI+ 정리하기
     Gdiplus::GdiplusShutdown(Token);
     return (int)msg.wParam;
@@ -113,23 +144,28 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
     hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
+    // 클라이언트 영역의 크기를 원하는 크기로 조절하기
+    RECT rc = { 0,0, g_ScreenSize.X, g_ScreenSize.Y };
+
+    AdjustWindowRectEx(&rc, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
+
     // 실제 윈도우 생성
-    HWND hWnd = CreateWindowW(szWindowClass,
+    g_hMainWindow = CreateWindowW(szWindowClass,
         L"2D Shooting for GDI+",
         // WS_OVERLAPPEDWINDOW에서 
         // WS_MAXIMIZEBOX(최대화 버튼 비활성화)와 WS_THICKFRAME(테두리잡고 크기 변경 금지)만 제외
         WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME,
-        200, 100,   // 시작 좌표(스크린 좌표계)
-        400, 600,    // 크기
+        g_AppPosition.X, g_AppPosition.Y,   // 시작 좌표(스크린 좌표계)
+        rc.right - rc.left, rc.bottom - rc.top,    // 크기(윈도우 스타일에 맞춰 재조정된 크기)
         nullptr, nullptr, hInstance, nullptr);
 
-    if (!hWnd)
+    if (!g_hMainWindow)
     {
         return FALSE;
     }
 
-    ShowWindow(hWnd, nCmdShow);  // 윈도우 보여주기
-    UpdateWindow(hWnd);          // 윈도우 업데이트하기(윈도우 화면 갱신)
+    ShowWindow(g_hMainWindow, nCmdShow);  // 윈도우 보여주기
+    UpdateWindow(g_hMainWindow);          // 윈도우 업데이트하기(윈도우 화면 갱신)
 
     return TRUE;
 }
@@ -144,139 +180,89 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //  WM_DESTROY  - 종료 메시지를 게시하고 반환합니다.
 //
 //
-  
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    //맵그리기
-    const int TILE_SIZE = 20;
-    static bool PutKey = false;
+    
     switch (message)
     {
-    case WM_COMMAND:
-    {
-        int wmId = LOWORD(wParam);
-        // 메뉴 선택을 구문 분석합니다:
-        switch (wmId)
+    case WM_CREATE:
+        // 윈도우가 생성되었을때 날아오는 메시지
+        g_BackBuffer = new Gdiplus::Bitmap(g_ScreenSize.X, g_ScreenSize.Y, PixelFormat32bppARGB);
+        g_BackBufferGraphics = Gdiplus::Graphics::FromImage(g_BackBuffer);
+        if (!g_BackBufferGraphics)
         {
-        case IDM_ABOUT:
-            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-            break;
-        case IDM_EXIT:
-            DestroyWindow(hWnd);
-            break;
-        default:
-            return DefWindowProc(hWnd, message, wParam, lParam);
+            // 혹시 안만들어졌을 때를 대비한 에러 출력
+            MessageBox(hWnd, L"백 버퍼 그래픽스 생성 실패", L"오류", MB_OK | MB_ICONERROR);
         }
-    }
-    break;
+        break;
+    case WM_DESTROY:
+        // 윈도우가 삭제되었을 때 날아오는 메세지
+        delete g_BackBufferGraphics;
+        g_BackBufferGraphics = nullptr;
+        delete g_BackBuffer;
+        g_BackBuffer = nullptr;
+        PostQuitMessage(0);
+        break;
     case WM_PAINT:
     {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hWnd, &ps);
 
         // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
-        
-        Gdiplus::Graphics GraphicsInstance(hdc);    // Graphics객체 만들기
-
-        Gdiplus::SolidBrush RedBrush(Gdiplus::Color(255, 255, 0, 0));
-       
-        Gdiplus::Pen BluePen(Gdiplus::Color(255, 0, 0, 255), 2.0f);
-        
-        //3. 집모양만들기     
-       Gdiplus::SolidBrush BlueBrush(Gdiplus::Color(255, 0, 0, 255));
-        Gdiplus::Point Triangle[3] = {
-            Gdiplus::Point(25 + InputX,50 + InputY),
-            Gdiplus::Point(10 + InputX,100 + InputY),
-            Gdiplus::Point(40 + InputX,100 + InputY)
-        };
-       // GraphicsInstance.FillPolygon(&RedBrush, Triangle, 3);
-        GraphicsInstance.DrawRectangle(&BluePen, 70 + InputX, 100 + InputY, 10, 10);
-        // 타일 하나의 크기를 정의합니다.
-        
-
-        // maze 배열을 순회하며 벽(1)을 그립니다.
-        for (int y = 0; y < mazeheight; ++y)
+        if (g_BackBufferGraphics)   // g_BackBufferGraphics 필수
         {
-            for (int x = 0; x < mazewidth; ++x)
-            {
-                // 배열의 값이 1이면 (벽이면)
-                if (Maze[y][x] == 1)
+            g_BackBufferGraphics->Clear(Gdiplus::Color(255, 0, 0, 0));
+            Gdiplus::SolidBrush GreenBrush(Gdiplus::Color(255, 0, 255, 0));
+            Gdiplus::SolidBrush BlueBrush(Gdiplus::Color(255, 0, 0, 255));
+            Gdiplus::SolidBrush YelloBrush(Gdiplus::Color(255, 255, 255, 0));
+
+            
+                
+               /* for (int y = 0; y < 16; y++)
                 {
-                    // 해당 위치에 사각형을 그립니다.
-                    // x좌표: x * TILE_SIZE, y좌표: y * TILE_SIZE
-                    // 크기: TILE_SIZE x TILE_SIZE
-                    GraphicsInstance.FillRectangle(&BlueBrush, x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
+                    
+                    for (int x = 0; x < 12; x++)
+                    {
+                        g_BackBufferGraphics->FillRectangle(&YelloBrush, 50 * x, ((50 * y) + PositionY) % 800, 5, 5);
+                        
+                    }                   
+                }            */
+                g_Map->Render(g_BackBufferGraphics);
+                
+                
+
+            Gdiplus::Pen GreenPen(Gdiplus::Color(255, 0, 255, 0), 2.0f);
+            Gdiplus::Point Positions[g_HouseVerticesCount];
+            for (int i = 0; i < g_HouseVerticesCount; i++)
+            {
+                Positions[i] = g_HousePosition + g_HouseVertices[i];
             }
+            g_BackBufferGraphics->DrawPolygon(&GreenPen, Positions, g_HouseVerticesCount);
+            //g_BackBufferGraphics->FillPolygon(&GreenBrush, Positions, g_HouseVerticesCount);
+
+            g_Player->Render(g_BackBufferGraphics);
+
+            Gdiplus::Graphics GraphicsInstance(hdc);    // Graphics객체 만들기(hdc에 그리기 위한 도구 만들기)
+            GraphicsInstance.DrawImage(g_BackBuffer, 0, 0);
         }
 
         EndPaint(hWnd, &ps);
     }
     break;
+    case WM_ERASEBKGND:
+        // 화면을 지워야 할 때 날라온 메시지
+        return 1;   // 배경지우기 방지(백버퍼 사용하고 있기 때문에)
     case WM_KEYDOWN:
+        g_Player->HandleKeyState(wParam, true);
         switch (wParam)
         {
-        case VK_LEFT:
-            if (!PutKey)
-            {
-                OutputDebugStringW(L"왼쪽 키를 눌렀다.\n");
-                InputX -= 10;
-                PutKey = true;
-                InvalidateRect(hWnd, nullptr, TRUE); //창을 다시 그리도록 요청(WM_PAINT 메세지가 들어간다.)
-            }
-            break;
-        case VK_RIGHT:
-            if (!PutKey)
-            {
-                OutputDebugStringW(L"오른쪽 키를 눌렀다.\n");
-                InputX += 10;
-                PutKey = true;
-                InvalidateRect(hWnd, nullptr, TRUE);
-            }
-            break;
-        case VK_UP:
-            if (!PutKey)
-            {
-                OutputDebugStringW(L"위쪽  키를 눌렀다.\n");
-                InputY -= 10;
-                PutKey = true;
-                InvalidateRect(hWnd, nullptr, TRUE);
-            }
-            break;
-        case VK_DOWN:
-            if (!PutKey)
-            {
-                OutputDebugStringW(L"아래쪽 키를 눌렀다.\n");
-                InputY += 10;
-                PutKey = true;
-                InvalidateRect(hWnd, nullptr, TRUE);
-            }
-            break;
-
         case VK_ESCAPE:
-            DestroyWindow(hWnd);    // hWnd 창을 닫아라 -> 프로그램을 꺼라(WM_DESTROY 메세지가 들어감)
-        break;      
-
+            DestroyWindow(hWnd);    // hWnd 창을 닫아라 -> 프로그램을 꺼라(WM_DESTROY메시지가 들어간다.)
         }
         break;
-        // 2. WM_KEYUP 메시지 처리 추가
     case WM_KEYUP:
-        switch (wParam)
-        {
-        case VK_LEFT:
-            PutKey = false; // 키를 떼면 상태를 어짐(false)으로 변경
-            break;
-        case VK_RIGHT:
-            PutKey = false;
-            break;
-        case VK_UP:
-            PutKey = false;
-            break;
-        case VK_DOWN:
-
-            PutKey = false;
-            break;
-        }
+        g_Player->HandleKeyState(wParam, false);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -284,11 +270,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-//실습
-// 1. 집모양을 그리고 키보드 입력으로 위아래좌우로 움직이기
-// 2. 눌르고 있을 때 한번만 움직여야 한다.
-
-
+// 실습
+// 1. 집모양을 그리고 키보드 입력으로 위아래좌우로 움직이기.
+// 2. 누르고 있을 때 한번만 움직여야 한다.(WM_KEYUP 활용)
 
 
 // 정보 대화 상자의 메시지 처리기입니다.
