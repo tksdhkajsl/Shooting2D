@@ -15,25 +15,6 @@ HINSTANCE hInst;                                // 현재 인스턴스입니다.
 WCHAR szTitle[MAX_LOADSTRING];                  // 제목 표시줄 텍스트입니다.
 WCHAR szWindowClass[MAX_LOADSTRING];            // 기본 창 클래스 이름입니다.
 
-HWND g_hMainWindow = nullptr;
-
-Gdiplus::Point g_AppPosition(200, 100);
-Gdiplus::Point g_ScreenSize(600, 800);
-
-Gdiplus::Point g_HousePosition(100, 100);
-constexpr int g_HouseVerticesCount = 7;
-const Gdiplus::Point g_HouseVertices[g_HouseVerticesCount] =
-{
-    {0,-100},{50,-50},{30,-50},{30,0},{-30,0},{-30,-50},{-50,-50}
-};
-
-Gdiplus::Bitmap* g_BackBuffer = nullptr;    // 백버퍼용 종이
-Gdiplus::Graphics* g_BackBufferGraphics = nullptr;  // 백버퍼용 종이에 그리기 위한 도구
-
-Player* g_Player = nullptr;
-Background* g_Background = nullptr;
-
-
 // 이 코드 모듈에 포함된 함수의 선언을 전달합니다:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
 BOOL                InitInstance(HINSTANCE, int);
@@ -55,8 +36,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     ULONG_PTR Token;
     Gdiplus::GdiplusStartupInput StartupInput;
     Gdiplus::GdiplusStartup(&Token, &StartupInput, nullptr);
-    g_Player = new Player(L"./Images/Airplane.png");
-    g_Background = new Background(L"./Images/Background.png");
+
+    GameManager::Get().Initialize();
 
     // 전역 문자열을 초기화합니다.
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
@@ -94,16 +75,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         float DeltaTime = (CurrentTime - LastTime) / 1000.0f;   // 결과를 초 단위로 변경
         LastTime = CurrentTime;
 
-        g_Background->Tick(DeltaTime);
-        g_Player->Tick(DeltaTime);
+        GameManager::Get().Tick(DeltaTime);
 
-        InvalidateRect(g_hMainWindow, nullptr, FALSE); // 매 프레임마다 WM_PAINT요청
+        InvalidateRect(GameManager::Get().GetMainWindowHandle(),
+            nullptr, FALSE); // 매 프레임마다 WM_PAINT요청
     }
 
-    delete g_Background;
-    g_Background = nullptr;
-    delete g_Player;
-    g_Player = nullptr;
+    GameManager::Get().Destroy();
+
     // GDI+ 정리하기
     Gdiplus::GdiplusShutdown(Token);
     return (int)msg.wParam;
@@ -151,27 +130,31 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
     hInst = hInstance; // 인스턴스 핸들을 전역 변수에 저장합니다.
 
     // 클라이언트 영역의 크기를 원하는 크기로 조절하기
-    RECT rc = { 0,0, g_ScreenSize.X, g_ScreenSize.Y };
+    RECT rc = { 0,0, GameManager::ScreenWidth, GameManager::ScreenHeight };
 
     AdjustWindowRectEx(&rc, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
 
+    const Point StartPosition = GameManager::Get().GetAppPosition();
+
     // 실제 윈도우 생성
-    g_hMainWindow = CreateWindowW(szWindowClass,
+    HWND hWnd = CreateWindowW(szWindowClass,
         L"2D Shooting for GDI+",
         // WS_OVERLAPPEDWINDOW에서 
         // WS_MAXIMIZEBOX(최대화 버튼 비활성화)와 WS_THICKFRAME(테두리잡고 크기 변경 금지)만 제외
         WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME,
-        g_AppPosition.X, g_AppPosition.Y,   // 시작 좌표(스크린 좌표계)
+        StartPosition.X, StartPosition.Y,   // 시작 좌표(스크린 좌표계)
         rc.right - rc.left, rc.bottom - rc.top,    // 크기(윈도우 스타일에 맞춰 재조정된 크기)
         nullptr, nullptr, hInstance, nullptr);
 
-    if (!g_hMainWindow)
+    if (!hWnd)
     {
         return FALSE;
     }
 
-    ShowWindow(g_hMainWindow, nCmdShow);  // 윈도우 보여주기
-    UpdateWindow(g_hMainWindow);          // 윈도우 업데이트하기(윈도우 화면 갱신)
+    GameManager::Get().SetMainWindowHandle(hWnd);    // 게임메니저에 핸들 설정
+    ShowWindow(hWnd, nCmdShow);  // 윈도우 보여주기
+    UpdateWindow(hWnd);          // 윈도우 업데이트하기(윈도우 화면 갱신)
+
 
     return TRUE;
 }
@@ -190,22 +173,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_CREATE:
-        // 윈도우가 생성되었을때 날아오는 메시지
-        g_BackBuffer = new Gdiplus::Bitmap(g_ScreenSize.X, g_ScreenSize.Y, PixelFormat32bppARGB);
-        g_BackBufferGraphics = Gdiplus::Graphics::FromImage(g_BackBuffer);
-        if (!g_BackBufferGraphics)
-        {
-            // 혹시 안만들어졌을 때를 대비한 에러 출력
-            MessageBox(hWnd, L"백 버퍼 그래픽스 생성 실패", L"오류", MB_OK | MB_ICONERROR);
-        }
-        break;
+        //case WM_CREATE:
+        //    // 윈도우가 생성되었을때 날아오는 메시지        
+        //    break;
     case WM_DESTROY:
-        // 윈도우가 삭제되었을 때 날아오는 메세지
-        delete g_BackBufferGraphics;
-        g_BackBufferGraphics = nullptr;
-        delete g_BackBuffer;
-        g_BackBuffer = nullptr;
+        // 윈도우가 삭제되었을 때 날아오는 메세지        
         PostQuitMessage(0);
         break;
     case WM_PAINT:
@@ -214,38 +186,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         HDC hdc = BeginPaint(hWnd, &ps);
 
         // TODO: 여기에 hdc를 사용하는 그리기 코드를 추가합니다...
-        if (g_BackBufferGraphics)   // g_BackBufferGraphics 필수
-        {
-            g_BackBufferGraphics->Clear(Gdiplus::Color(255, 0, 0, 0));
-            Gdiplus::SolidBrush GreenBrush(Gdiplus::Color(255, 0, 255, 0));
-            Gdiplus::SolidBrush BlueBrush(Gdiplus::Color(255, 0, 0, 255));
-            Gdiplus::SolidBrush YelloBrush(Gdiplus::Color(255, 255, 255, 0));
-
-            g_Background->Render(g_BackBufferGraphics);
-
-            for (int y = 0; y < 16; y++)
-            {
-                for (int x = 0; x < 12; x++)
-                {
-                    g_BackBufferGraphics->FillRectangle(&BlueBrush, 50 * x, 50 * y, 5, 5);
-                }
-            }
-
-            Gdiplus::Pen GreenPen(Gdiplus::Color(255, 0, 255, 0), 2.0f);
-            Gdiplus::Point Positions[g_HouseVerticesCount];
-            for (int i = 0; i < g_HouseVerticesCount; i++)
-            {
-                Positions[i] = g_HousePosition + g_HouseVertices[i];
-            }
-            g_BackBufferGraphics->DrawPolygon(&GreenPen, Positions, g_HouseVerticesCount);
-            //g_BackBufferGraphics->FillPolygon(&GreenBrush, Positions, g_HouseVerticesCount);
-
-
-            g_Player->Render(g_BackBufferGraphics);
-
-            Gdiplus::Graphics GraphicsInstance(hdc);    // Graphics객체 만들기(hdc에 그리기 위한 도구 만들기)
-            GraphicsInstance.DrawImage(g_BackBuffer, 0, 0);
-        }
+        GameManager::Get().Render();
+        Gdiplus::Graphics GraphicsInstance(hdc);    // Graphics객체 만들기(hdc에 그리기 위한 도구 만들기)
+        GraphicsInstance.DrawImage(GameManager::Get().GetBackBuffer(), 0, 0);
 
         EndPaint(hWnd, &ps);
     }
@@ -254,7 +197,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         // 화면을 지워야 할 때 날라온 메시지
         return 1;   // 배경지우기 방지(백버퍼 사용하고 있기 때문에)
     case WM_KEYDOWN:
-        g_Player->HandleKeyState(wParam, true);
+        GameManager::Get().HandleKeyState(wParam, true);
         switch (wParam)
         {
         case VK_ESCAPE:
@@ -262,7 +205,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_KEYUP:
-        g_Player->HandleKeyState(wParam, false);
+        GameManager::Get().HandleKeyState(wParam, false);
         break;
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
@@ -271,8 +214,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 // 실습
-// 1. 집모양을 그리고 키보드 입력으로 위아래좌우로 움직이기.
-// 2. 누르고 있을 때 한번만 움직여야 한다.(WM_KEYUP 활용)
+// 1. TestGridActor만들기 -> 50픽셀 단위로 점찍어서 위치 확인 쉽게 할 수 있게 해주는 클래스
+// 2. TestHouseActor만들기 -> 집모양 그려주는 클래스
+
 
 
 // 정보 대화 상자의 메시지 처리기입니다.
