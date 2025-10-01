@@ -1,10 +1,10 @@
 #include "Player.h"
+#include "Common.h"
 
 Player::Player(const wchar_t* InImagePath)
 {
     Position.X = 300;
     Position.Y = 700;
-
 
     KeyWasPressedMap[InputDirection::Up] = false;
     KeyWasPressedMap[InputDirection::Down] = false;
@@ -31,6 +31,33 @@ Player::~Player()
     }
 }
 
+void Player::Tick(float InDeltaTime)
+{
+    float MoveDistance = InDeltaTime * Speed;
+    if (KeyWasPressedMap[InputDirection::Left])
+    {
+        Position.X -= MoveDistance;
+    }
+    if (KeyWasPressedMap[InputDirection::Right])
+    {
+        Position.X += MoveDistance;
+    }
+
+    if (Position.X < (0 - PixelSize * 0.5f))
+    {
+        Position.X = g_ScreenSize.X + PixelSize * 0.5f; // 순환 이동
+    }
+    else if ((g_ScreenSize.X + PixelSize * 0.5f) < Position.X)
+    {
+        Position.X = static_cast<float>(0 - PixelSize * 0.5f);
+    }
+
+    char temp[256];
+    sprintf_s(temp, "(%.1f, %.1f)\n", Position.X, Position.Y);
+    
+    OutputDebugStringA(temp);
+}
+
 void Player::Render(Gdiplus::Graphics* InGraphics)
 {
     if (Image)
@@ -47,7 +74,8 @@ void Player::Render(Gdiplus::Graphics* InGraphics)
         Gdiplus::SolidBrush RedBrush(Gdiplus::Color(255, 255, 0, 0));
         InGraphics->FillEllipse(
             &RedBrush,
-            100, 100,
+            static_cast<int>(Position.X - PixelSize * Pivot.X),    // 그려질 위치
+            static_cast<int>(Position.Y - PixelSize * Pivot.Y),
             PixelSize, PixelSize);
     }
 }
@@ -57,24 +85,5 @@ void Player::HandleKeyState(WPARAM InKey, bool InIsPressed)
     if (InKey == VK_LEFT || InKey == VK_RIGHT)
     {
         KeyWasPressedMap[static_cast<InputDirection>(InKey)] = InIsPressed;
-
-        if (InKey == VK_LEFT)
-        {
-            Position.X -= Speed;
-            if (Position.X < 0)
-            {
-                Position.X = 0;
-            }
-            InvalidateRect(g_hMainWindow, nullptr, FALSE);
-        }
-        else if (InKey == VK_RIGHT)
-        {
-            Position.X += Speed;
-            if (Position.X > g_ScreenSize.X)
-            {
-                Position.X = g_ScreenSize.X - PixelSize;
-            }
-            InvalidateRect(g_hMainWindow, nullptr, FALSE);
-        }
     }
 }
