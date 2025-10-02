@@ -7,10 +7,12 @@ class Player : public Actor
 {
 public:
 	Player() = delete;
-	Player(const wchar_t* InImagePath);
+	Player(ResourceID InID) : Actor(InID) {};
 
+	virtual void OnInitialize() override;
 	virtual void OnTick(float InDeltaTime) override;
 	virtual void OnRender(Gdiplus::Graphics* InGraphics) override;
+	virtual void OnOverlap(Actor* InOther) override;
 
 	void HandleKeyState(WPARAM InKey, bool InIsPressed);
 

@@ -2,8 +2,7 @@
 #include "Common.h"
 #include "GameManager.h"
 
-Player::Player(const wchar_t* InImagePath)
-    : Actor(InImagePath)
+void Player::OnInitialize()
 {
     Position.X = 300.0f;
     Position.Y = 700.0f;
@@ -11,8 +10,11 @@ Player::Player(const wchar_t* InImagePath)
     KeyWasPressedMap[InputDirection::Down] = false;
     KeyWasPressedMap[InputDirection::Left] = false;
     KeyWasPressedMap[InputDirection::Right] = false;
-}
 
+    PhysicsComponent* physicsComponent = new PhysicsComponent(this, CollisionType::Circle, PhysicsLayer::Player);
+    physicsComponent->SetRadius(static_cast<float>(Size * 0.5f)); // 반지름 설정
+    AddComponent(physicsComponent); // 물리 컴포넌트 추가
+}
 
 void Player::OnTick(float InDeltaTime)
 {
@@ -49,6 +51,16 @@ void Player::OnRender(Gdiplus::Graphics* InGraphics)
             static_cast<int>(Position.X - Size * Pivot.X),    // 그려질 위치
             static_cast<int>(Position.Y - Size * Pivot.Y),
             Size, Size);
+    }
+}
+
+void Player::OnOverlap(Actor* InOther)
+{
+    OutputDebugString(L"Player::OnOverlap called\n");
+    if (InOther && InOther != this)
+    {
+        // 게임 오버 처리
+        GameManager::Get().SetGameState(GameState::GameOver);
     }
 }
 

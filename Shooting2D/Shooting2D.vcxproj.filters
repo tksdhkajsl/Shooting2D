@@ -13,6 +13,18 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Actor">
+      <UniqueIdentifier>{87d7e629-2f8b-4acc-89af-2b56e09b8736}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Singletons">
+      <UniqueIdentifier>{efd7bb98-9756-4484-9bd6-98910cf9a469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Test">
+      <UniqueIdentifier>{6c8e9cc2-36dc-43e1-9852-b28c5e73c889}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Component">
+      <UniqueIdentifier>{48b7c34f-a869-4ecc-8223-b49762f803b0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -27,9 +39,102 @@
     <ClInclude Include="Shooting2D.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
+    <ClInclude Include="Background.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="enums.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Actor.h">
+      <Filter>Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>Actor</Filter>
+    </ClInclude>
+    <ClInclude Include="GameManager.h">
+      <Filter>Singletons</Filter>
+    </ClInclude>
+    <ClInclude Include="ResourceManager.h">
+      <Filter>Singletons</Filter>
+    </ClInclude>
+    <ClInclude Include="Singleton.h">
+      <Filter>Singletons</Filter>
+    </ClInclude>
+    <ClInclude Include="Factory.h">
+      <Filter>Singletons</Filter>
+    </ClInclude>
+    <ClInclude Include="TestGridActor.h">
+      <Filter>Test</Filter>
+    </ClInclude>
+    <ClInclude Include="TestHouseActor.h">
+      <Filter>Test</Filter>
+    </ClInclude>
+    <ClInclude Include="TestCollisionActor.h">
+      <Filter>Test</Filter>
+    </ClInclude>
+    <ClInclude Include="Component.h">
+      <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsComponent.h">
+      <Filter>Component</Filter>
+    </ClInclude>
+    <ClInclude Include="TimerUI.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="UserInterface.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Bomb.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="BombSpawner.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Shooting2D.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Background.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Actor.cpp">
+      <Filter>Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>Actor</Filter>
+    </ClCompile>
+    <ClCompile Include="GameManager.cpp">
+      <Filter>Singletons</Filter>
+    </ClCompile>
+    <ClCompile Include="ResourceManager.cpp">
+      <Filter>Singletons</Filter>
+    </ClCompile>
+    <ClCompile Include="TestGridActor.cpp">
+      <Filter>Test</Filter>
+    </ClCompile>
+    <ClCompile Include="TestHouseActor.cpp">
+      <Filter>Test</Filter>
+    </ClCompile>
+    <ClCompile Include="TestCollisionActor.cpp">
+      <Filter>Test</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsComponent.cpp">
+      <Filter>Component</Filter>
+    </ClCompile>
+    <ClCompile Include="TimerUI.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="UserInterface.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Bomb.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="BombSpawner.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>
